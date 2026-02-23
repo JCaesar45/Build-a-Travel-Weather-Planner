@@ -1,0 +1,1009 @@
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Travel Weather Planner | Interactive Decision Engine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --neon-cyan: #00f3ff;
+      --neon-purple: #bc13fe;
+      --neon-green: #0aff0a;
+      --dark-bg: #0a0a0f;
+      --card-bg: rgba(20, 20, 30, 0.6);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--dark-bg);
+      min-height: 100vh;
+      overflow-x: hidden;
+      color: #e0e0e0;
+    }
+
+    .font-display {
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    /* Animated Background */
+    .bg-mesh {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      background:
+        radial-gradient(ellipse at 20% 80%, rgba(0, 243, 255, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(188, 19, 254, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(10, 255, 10, 0.05) 0%, transparent 70%);
+      animation: bgPulse 8s ease-in-out infinite;
+    }
+
+    @keyframes bgPulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.7;
+      }
+    }
+
+    .grid-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    /* Glassmorphism Cards */
+    .glass-panel {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    /* Custom Range Slider */
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 24px;
+      height: 24px;
+      background: var(--neon-cyan);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 20px var(--neon-cyan);
+      transition: transform 0.2s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* Toggle Switches */
+    .toggle-switch {
+      position: relative;
+      width: 60px;
+      height: 32px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .toggle-switch.active {
+      background: rgba(0, 243, 255, 0.2);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
+    }
+
+    .toggle-switch.active.rain {
+      background: rgba(100, 149, 237, 0.3);
+      border-color: #6495ed;
+      box-shadow: 0 0 20px rgba(100, 149, 237, 0.3);
+    }
+
+    .toggle-switch.active.car {
+      background: rgba(255, 215, 0, 0.2);
+      border-color: #ffd700;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+    }
+
+    .toggle-switch.active.ride {
+      background: rgba(188, 19, 254, 0.2);
+      border-color: var(--neon-purple);
+      box-shadow: 0 0 20px rgba(188, 19, 254, 0.3);
+    }
+
+    .toggle-switch.active.bike {
+      background: rgba(10, 255, 10, 0.2);
+      border-color: var(--neon-green);
+      box-shadow: 0 0 20px rgba(10, 255, 10, 0.3);
+    }
+
+    .toggle-knob {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 24px;
+      height: 24px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .toggle-switch.active .toggle-knob {
+      transform: translateX(28px);
+    }
+
+    /* Result Display */
+    .result-container {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .result-glow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(0, 243, 255, 0.2) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.5s;
+      pointer-events: none;
+    }
+
+    .result-container.success .result-glow {
+      background: radial-gradient(circle, rgba(10, 255, 10, 0.3) 0%, transparent 70%);
+      opacity: 1;
+    }
+
+    .result-container.error .result-glow {
+      background: radial-gradient(circle, rgba(255, 50, 50, 0.3) 0%, transparent 70%);
+      opacity: 1;
+    }
+
+    /* Animated Icons */
+    .weather-icon {
+      font-size: 4rem;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+
+    .transport-icon {
+      transition: all 0.3s;
+      filter: grayscale(100%) opacity(0.3);
+    }
+
+    .transport-icon.active {
+      filter: grayscale(0%) opacity(1);
+      transform: scale(1.1);
+    }
+
+    /* Decision Tree Visualization */
+    .tree-node {
+      padding: 12px 20px;
+      border-radius: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .tree-node.active {
+      border-color: var(--neon-cyan);
+      background: rgba(0, 243, 255, 0.1);
+      box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+    }
+
+    .tree-node.success {
+      border-color: var(--neon-green);
+      background: rgba(10, 255, 10, 0.1);
+      box-shadow: 0 0 20px rgba(10, 255, 10, 0.2);
+    }
+
+    .tree-node.fail {
+      border-color: #ff4444;
+      background: rgba(255, 68, 68, 0.1);
+      box-shadow: 0 0 20px rgba(255, 68, 68, 0.2);
+    }
+
+    .tree-connector {
+      width: 2px;
+      height: 30px;
+      background: rgba(255, 255, 255, 0.1);
+      margin: 0 auto;
+      transition: all 0.3s;
+    }
+
+    .tree-connector.active {
+      background: var(--neon-cyan);
+      box-shadow: 0 0 10px var(--neon-cyan);
+    }
+
+    /* Particle Effects */
+    .particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: var(--neon-cyan);
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    @keyframes particleFloat {
+      0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translateY(-100px) scale(0);
+      }
+    }
+
+    /* Code Block Styling */
+    .code-block {
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-family: 'Fira Code', monospace;
+      overflow: hidden;
+    }
+
+    .code-header {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      gap: 8px;
+    }
+
+    .code-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .code-content {
+      padding: 20px;
+      overflow-x: auto;
+      font-size: 0.875rem;
+      line-height: 1.6;
+    }
+
+    /* Glitch Effect */
+    .glitch {
+      position: relative;
+    }
+
+    .glitch::before,
+    .glitch::after {
+      content: attr(data-text);
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .glitch::before {
+      animation: glitch-1 2s infinite;
+      color: #ff00ff;
+      z-index: -1;
+    }
+
+    .glitch::after {
+      animation: glitch-2 2s infinite;
+      color: #00ffff;
+      z-index: -2;
+    }
+
+    @keyframes glitch-1 {
+
+      0%,
+      100% {
+        clip-path: inset(0 0 0 0);
+        transform: translate(0);
+      }
+
+      20% {
+        clip-path: inset(20% 0 30% 0);
+        transform: translate(-2px, 2px);
+      }
+
+      40% {
+        clip-path: inset(50% 0 20% 0);
+        transform: translate(2px, -2px);
+      }
+
+      60% {
+        clip-path: inset(10% 0 60% 0);
+        transform: translate(-2px, 0);
+      }
+
+      80% {
+        clip-path: inset(80% 0 5% 0);
+        transform: translate(2px, 2px);
+      }
+    }
+
+    @keyframes glitch-2 {
+
+      0%,
+      100% {
+        clip-path: inset(0 0 0 0);
+        transform: translate(0);
+      }
+
+      20% {
+        clip-path: inset(60% 0 10% 0);
+        transform: translate(2px, -2px);
+      }
+
+      40% {
+        clip-path: inset(30% 0 40% 0);
+        transform: translate(-2px, 2px);
+      }
+
+      60% {
+        clip-path: inset(10% 0 70% 0);
+        transform: translate(2px, 0);
+      }
+
+      80% {
+        clip-path: inset(40% 0 30% 0);
+        transform: translate(-2px, -2px);
+      }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 243, 255, 0.3);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 243, 255, 0.5);
+    }
+
+    /* Tab System */
+    .tab-btn {
+      position: relative;
+      padding: 12px 24px;
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.5);
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: 500;
+    }
+
+    .tab-btn.active {
+      color: var(--neon-cyan);
+    }
+
+    .tab-btn::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: var(--neon-cyan);
+      transform: scaleX(0);
+      transition: transform 0.3s;
+    }
+
+    .tab-btn.active::after {
+      transform: scaleX(1);
+    }
+
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-mesh"></div>
+  <div class="grid-overlay"></div>
+
+  <div class="min-h-screen p-4 md:p-8">
+    <!-- Header -->
+    <header class="max-w-7xl mx-auto mb-12 text-center relative">
+      <div class="inline-block mb-4 px-4 py-1 rounded-full border border-cyan-400/30 bg-cyan-400/10 text-cyan-400 text-sm font-mono">
+        <span class="animate-pulse">●</span> SYSTEM ONLINE
+      </div>
+      <h1 class="font-display text-5xl md:text-7xl font-bold mb-4 glitch" data-text="TRAVEL WEATHER PLANNER">
+        TRAVEL WEATHER PLANNER
+      </h1>
+      <p class="text-gray-400 text-lg max-w-2xl mx-auto">
+        Advanced decision engine for optimal commute planning based on environmental and resource variables
+      </p>
+    </header>
+
+    <main class="max-w-7xl mx-auto grid lg:grid-cols-2 gap-8">
+      <!-- Left Panel: Controls -->
+      <div class="space-y-6">
+        <!-- Distance Control -->
+        <div class="glass-panel p-6 md:p-8">
+          <div class="flex justify-between items-center mb-6">
+            <label class="font-display text-xl font-semibold text-white">Distance</label>
+            <span class="text-3xl font-bold text-cyan-400 font-mono">
+              <span id="distanceValue">5.0</span> <span class="text-sm text-gray-500">mi</span>
+            </span>
+          </div>
+          <input type="range" id="distanceSlider" min="0" max="20" step="0.1" value="5">
+          <div class="flex justify-between mt-2 text-xs text-gray-500 font-mono">
+            <span>0</span>
+            <span>5</span>
+            <span>10</span>
+            <span>15</span>
+            <span>20</span>
+          </div>
+        </div>
+
+        <!-- Conditions Grid -->
+        <div class="glass-panel p-6 md:p-8">
+          <h2 class="font-display text-xl font-semibold mb-6 text-white">Environmental Conditions</h2>
+
+          <div class="space-y-4">
+            <!-- Rain Toggle -->
+            <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-colors">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center text-2xl">
+                  🌧️
+                </div>
+                <div>
+                  <div class="font-semibold text-white">Precipitation</div>
+                  <div class="text-sm text-gray-400">Rain or adverse weather</div>
+                </div>
+              </div>
+              <div class="toggle-switch" id="rainToggle" onclick="toggleSwitch(this, 'rain')">
+                <div class="toggle-knob"></div>
+              </div>
+            </div>
+
+            <!-- Bike Toggle -->
+            <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-colors">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center text-2xl">
+                  🚴
+                </div>
+                <div>
+                  <div class="font-semibold text-white">Bicycle Available</div>
+                  <div class="text-sm text-gray-400">Human-powered transport</div>
+                </div>
+              </div>
+              <div class="toggle-switch bike" id="bikeToggle" onclick="toggleSwitch(this, 'bike')">
+                <div class="toggle-knob"></div>
+              </div>
+            </div>
+
+            <!-- Car Toggle -->
+            <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-colors">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center text-2xl">
+                  🚗
+                </div>
+                <div>
+                  <div class="font-semibold text-white">Vehicle Access</div>
+                  <div class="text-sm text-gray-400">Personal automobile</div>
+                </div>
+              </div>
+              <div class="toggle-switch car" id="carToggle" onclick="toggleSwitch(this, 'car')">
+                <div class="toggle-knob"></div>
+              </div>
+            </div>
+
+            <!-- Ride Share Toggle -->
+            <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-colors">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center text-2xl">
+                  📱
+                </div>
+                <div>
+                  <div class="font-semibold text-white">Ride Share</div>
+                  <div class="text-sm text-gray-400">Uber, Lyft, etc.</div>
+                </div>
+              </div>
+              <div class="toggle-switch ride" id="rideToggle" onclick="toggleSwitch(this, 'ride')">
+                <div class="toggle-knob"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Presets -->
+        <div class="glass-panel p-6">
+          <h3 class="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">Quick Scenarios</h3>
+          <div class="grid grid-cols-2 gap-3">
+            <button onclick="loadScenario('walk')" class="p-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-cyan-400/50 transition-all text-left">
+              <div class="text-cyan-400 font-semibold">🚶 Walk</div>
+              <div class="text-xs text-gray-500">0.5 mi, Clear</div>
+            </button>
+            <button onclick="loadScenario('bike')" class="p-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-green-400/50 transition-all text-left">
+              <div class="text-green-400 font-semibold">🚴 Bike</div>
+              <div class="text-xs text-gray-500">3 mi, Clear + Bike</div>
+            </button>
+            <button onclick="loadScenario('rainy')" class="p-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-400/50 transition-all text-left">
+              <div class="text-blue-400 font-semibold">🌧️ Rainy</div>
+              <div class="text-xs text-gray-500">3 mi, Rain</div>
+            </button>
+            <button onclick="loadScenario('far')" class="p-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-yellow-400/50 transition-all text-left">
+              <div class="text-yellow-400 font-semibold">🚗 Long</div>
+              <div class="text-xs text-gray-500">10 mi + Car</div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Panel: Visualization & Results -->
+      <div class="space-y-6">
+        <!-- Main Result Display -->
+        <div class="glass-panel p-8 result-container" id="resultContainer">
+          <div class="result-glow"></div>
+          <div class="relative z-10 text-center">
+            <div class="text-sm text-gray-400 mb-2 font-mono uppercase tracking-widest">Decision Output</div>
+            <div class="text-6xl md:text-8xl font-bold font-display mb-4 transition-all duration-500" id="resultText">
+              --
+            </div>
+            <div class="text-lg text-gray-300" id="resultMessage">
+              Adjust parameters to calculate commute feasibility
+            </div>
+          </div>
+        </div>
+
+        <!-- Logic Visualization -->
+        <div class="glass-panel p-6">
+          <h3 class="font-display text-lg font-semibold mb-6 text-white flex items-center gap-2">
+            <span class="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
+            Decision Tree
+          </h3>
+
+          <div class="flex flex-col items-center space-y-0">
+            <!-- Root -->
+            <div class="tree-node w-full text-center" id="nodeDistance">
+              <div class="font-mono text-sm text-gray-400">CHECK DISTANCE</div>
+              <div class="font-semibold" id="nodeDistanceText">5.0 miles</div>
+            </div>
+
+            <div class="tree-connector" id="conn1"></div>
+
+            <!-- Condition -->
+            <div class="tree-node w-full" id="nodeCondition">
+              <div class="font-mono text-sm text-gray-400 mb-1">EVALUATE CONDITIONS</div>
+              <div class="flex justify-center gap-4 text-xs" id="conditionTags">
+                <span class="px-2 py-1 rounded bg-white/10">No Rain</span>
+                <span class="px-2 py-1 rounded bg-white/10">No Bike</span>
+              </div>
+            </div>
+
+            <div class="tree-connector" id="conn2"></div>
+
+            <!-- Result -->
+            <div class="tree-node w-full text-center" id="nodeResult">
+              <div class="font-mono text-sm text-gray-400">RESULT</div>
+              <div class="font-bold text-xl" id="nodeResultText">PENDING</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transport Modes Status -->
+        <div class="glass-panel p-6">
+          <h3 class="font-display text-lg font-semibold mb-4 text-white">Available Transport Modes</h3>
+          <div class="grid grid-cols-4 gap-4">
+            <div class="text-center p-4 rounded-xl bg-white/5 transport-icon" id="iconWalk">
+              <div class="text-3xl mb-2">🚶</div>
+              <div class="text-xs text-gray-400">Walk</div>
+              <div class="text-xs font-mono mt-1 text-gray-600" id="walkRange">≤1 mi</div>
+            </div>
+            <div class="text-center p-4 rounded-xl bg-white/5 transport-icon" id="iconBike">
+              <div class="text-3xl mb-2">🚴</div>
+              <div class="text-xs text-gray-400">Bike</div>
+              <div class="text-xs font-mono mt-1 text-gray-600" id="bikeRange">1-6 mi</div>
+            </div>
+            <div class="text-center p-4 rounded-xl bg-white/5 transport-icon" id="iconCar">
+              <div class="text-3xl mb-2">🚗</div>
+              <div class="text-xs text-gray-400">Car</div>
+              <div class="text-xs font-mono mt-1 text-gray-600">Any</div>
+            </div>
+            <div class="text-center p-4 rounded-xl bg-white/5 transport-icon" id="iconRide">
+              <div class="text-3xl mb-2">🚕</div>
+              <div class="text-xs text-gray-400">Ride</div>
+              <div class="text-xs font-mono mt-1 text-gray-600">>6 mi</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Code Implementation Tabs -->
+        <div class="glass-panel p-6">
+          <div class="flex border-b border-white/10 mb-4">
+            <button class="tab-btn active" onclick="switchTab('python')">Python</button>
+            <button class="tab-btn" onclick="switchTab('javascript')">JavaScript</button>
+            <button class="tab-btn" onclick="switchTab('java')">Java</button>
+          </div>
+
+          <div id="python" class="tab-content active">
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dot bg-red-500"></div>
+                <div class="code-dot bg-yellow-500"></div>
+                <div class="code-dot bg-green-500"></div>
+                <span class="ml-2 text-xs text-gray-400">main.py</span>
+              </div>
+              <div class="code-content text-gray-300">
+                <pre>distance_mi = <span class="text-cyan-400" id="pyDist">5.0</span>
+is_raining = <span class="text-purple-400" id="pyRain">False</span>
+has_bike = <span class="text-green-400" id="pyBike">True</span>
+has_car = <span class="text-yellow-400" id="pyCar">False</span>
+has_ride = <span class="text-pink-400" id="pyRide">False</span>
+
+if not distance_mi:
+    print(False)
+elif distance_mi <= 1:
+    print(not is_raining)
+elif distance_mi <= 6:
+    print(has_bike and not is_raining)
+else:
+    print(has_car or has_ride)</pre>
+              </div>
+            </div>
+          </div>
+
+          <div id="javascript" class="tab-content">
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dot bg-red-500"></div>
+                <div class="code-dot bg-yellow-500"></div>
+                <div class="code-dot bg-green-500"></div>
+                <span class="ml-2 text-xs text-gray-400">script.js</span>
+              </div>
+              <div class="code-content text-gray-300">
+                <pre>const distance_mi = <span class="text-cyan-400" id="jsDist">5.0</span>;
+const is_raining = <span class="text-purple-400" id="jsRain">false</span>;
+const has_bike = <span class="text-green-400" id="jsBike">true</span>;
+const has_car = <span class="text-yellow-400" id="jsCar">false</span>;
+const has_ride = <span class="text-pink-400" id="jsRide">false</span>;
+
+if (!distance_mi) {
+    console.log(false);
+} else if (distance_mi <= 1) {
+    console.log(!is_raining);
+} else if (distance_mi <= 6) {
+    console.log(has_bike && !is_raining);
+} else {
+    console.log(has_car || has_ride);
+}</pre>
+              </div>
+            </div>
+          </div>
+
+          <div id="java" class="tab-content">
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dot bg-red-500"></div>
+                <div class="code-dot bg-yellow-500"></div>
+                <div class="code-dot bg-green-500"></div>
+                <span class="ml-2 text-xs text-gray-400">Main.java</span>
+              </div>
+              <div class="code-content text-gray-300">
+                <pre>int distance_mi = <span class="text-cyan-400" id="javaDist">5</span>;
+boolean is_raining = <span class="text-purple-400" id="javaRain">false</span>;
+boolean has_bike = <span class="text-green-400" id="javaBike">true</span>;
+boolean has_car = <span class="text-yellow-400" id="javaCar">false</span>;
+boolean has_ride = <span class="text-pink-400" id="javaRide">false</span>;
+
+if (distance_mi == 0) {
+    System.out.println(false);
+} else if (distance_mi <= 1) {
+    System.out.println(!is_raining);
+} else if (distance_mi <= 6) {
+    System.out.println(has_bike && !is_raining);
+} else {
+    System.out.println(has_car || has_ride);
+}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="max-w-7xl mx-auto mt-12 text-center text-gray-500 text-sm pb-8">
+      <p class="font-mono">Travel Weather Planner v2.0 // Decision Engine // Built with precision</p>
+    </footer>
+  </div>
+
+  <script>
+    // State management
+    const state = {
+      distance: 5.0,
+      isRaining: false,
+      hasBike: true,
+      hasCar: false,
+      hasRide: false
+    };
+    // DOM Elements
+    const distanceSlider = document.getElementById('distanceSlider');
+    const distanceValue = document.getElementById('distanceValue');
+    const resultContainer = document.getElementById('resultContainer');
+    const resultText = document.getElementById('resultText');
+    const resultMessage = document.getElementById('resultMessage');
+    // Initialize
+    distanceSlider.addEventListener('input', (e) => {
+      state.distance = parseFloat(e.target.value);
+      distanceValue.textContent = state.distance.toFixed(1);
+      updateCalculation();
+    });
+
+    function toggleSwitch(element, type) {
+      element.classList.toggle('active');
+      switch (type) {
+        case 'rain':
+          state.isRaining = element.classList.contains('active');
+          break;
+        case 'bike':
+          state.hasBike = element.classList.contains('active');
+          break;
+        case 'car':
+          state.hasCar = element.classList.contains('active');
+          break;
+        case 'ride':
+          state.hasRide = element.classList.contains('active');
+          break;
+      }
+      createParticles(element);
+      updateCalculation();
+    }
+
+    function createParticles(element) {
+      const rect = element.getBoundingClientRect();
+      for (let i = 0; i < 8; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.left = rect.left + rect.width / 2 + (Math.random() - 0.5) * 40 + 'px';
+        particle.style.top = rect.top + rect.height / 2 + 'px';
+        particle.style.animation = `particleFloat ${0.5 + Math.random() * 0.5}s ease-out forwards`;
+        document.body.appendChild(particle);
+        setTimeout(() => particle.remove(), 1000);
+      }
+    }
+
+    function updateCalculation() {
+      // Core logic
+      let result;
+      let message;
+      let activeTransport = null;
+      // Reset all transport icons
+      document.querySelectorAll('.transport-icon').forEach(icon => {
+        icon.classList.remove('active');
+      });
+      // Reset tree nodes
+      document.querySelectorAll('.tree-node').forEach(node => {
+        node.classList.remove('active', 'success', 'fail');
+      });
+      document.querySelectorAll('.tree-connector').forEach(conn => {
+        conn.classList.remove('active');
+      });
+      // Update distance node
+      document.getElementById('nodeDistanceText').textContent = state.distance.toFixed(1) + ' miles';
+      document.getElementById('nodeDistance').classList.add('active');
+      // Logic chain
+      if (!state.distance) {
+        result = false;
+        message = "Invalid distance provided";
+        document.getElementById('nodeResult').classList.add('fail');
+      } else if (state.distance <= 1) {
+        document.getElementById('conn1').classList.add('active');
+        result = !state.isRaining;
+        message = result ? "Walking is feasible" : "Too rainy to walk";
+        activeTransport = 'walk';
+        document.getElementById('iconWalk').classList.add('active');
+        document.getElementById('nodeCondition').classList.add('active');
+        document.getElementById('nodeResult').classList.add(result ? 'success' : 'fail');
+      } else if (state.distance <= 6) {
+        document.getElementById('conn1').classList.add('active');
+        result = state.hasBike && !state.isRaining;
+        message = result ? "Cycling is optimal" :
+          state.isRaining ? "Too wet to cycle" : "No bicycle available";
+        activeTransport = result ? 'bike' : null;
+        if (result) document.getElementById('iconBike').classList.add('active');
+        document.getElementById('nodeCondition').classList.add('active');
+        document.getElementById('nodeResult').classList.add(result ? 'success' : 'fail');
+      } else {
+        document.getElementById('conn1').classList.add('active');
+        result = state.hasCar || state.hasRide;
+        message = result ?
+          (state.hasCar ? "Driving is available" : "Ride share accessible") :
+          "No motorized transport available";
+        activeTransport = state.hasCar ? 'car' : state.hasRide ? 'ride' : null;
+        if (state.hasCar) document.getElementById('iconCar').classList.add('active');
+        if (state.hasRide) document.getElementById('iconRide').classList.add('active');
+        document.getElementById('nodeCondition').classList.add('active');
+        document.getElementById('nodeResult').classList.add(result ? 'success' : 'fail');
+      }
+      document.getElementById('conn2').classList.add('active');
+      // Update result display
+      resultContainer.classList.remove('success', 'error');
+      resultContainer.classList.add(result ? 'success' : 'error');
+      // Animate result change
+      resultText.style.transform = 'scale(0.8)';
+      resultText.style.opacity = '0';
+      setTimeout(() => {
+        resultText.textContent = result ? 'TRUE' : 'FALSE';
+        resultText.style.color = result ? 'var(--neon-green)' : '#ff4444';
+        resultText.style.transform = 'scale(1)';
+        resultText.style.opacity = '1';
+        resultMessage.textContent = message;
+      }, 150);
+      document.getElementById('nodeResultText').textContent = result ? 'APPROVED' : 'DENIED';
+      document.getElementById('nodeResultText').style.color = result ? 'var(--neon-green)' : '#ff4444';
+      // Update condition tags
+      const tags = [];
+      if (state.isRaining) tags.push('<span class="px-2 py-1 rounded bg-blue-500/30 text-blue-300">Raining</span>');
+      else tags.push('<span class="px-2 py-1 rounded bg-white/10">Clear</span>');
+      if (state.hasBike) tags.push('<span class="px-2 py-1 rounded bg-green-500/30 text-green-300">Bike</span>');
+      if (state.hasCar) tags.push('<span class="px-2 py-1 rounded bg-yellow-500/30 text-yellow-300">Car</span>');
+      if (state.hasRide) tags.push('<span class="px-2 py-1 rounded bg-purple-500/30 text-purple-300">Ride</span>');
+      document.getElementById('conditionTags').innerHTML = tags.join('');
+      // Update code displays
+      updateCodeDisplay();
+    }
+
+    function updateCodeDisplay() {
+      // Python
+      document.getElementById('pyDist').textContent = state.distance.toFixed(1);
+      document.getElementById('pyRain').textContent = state.isRaining;
+      document.getElementById('pyBike').textContent = state.hasBike;
+      document.getElementById('pyCar').textContent = state.hasCar;
+      document.getElementById('pyRide').textContent = state.hasRide;
+      // JavaScript
+      document.getElementById('jsDist').textContent = state.distance.toFixed(1);
+      document.getElementById('jsRain').textContent = state.isRaining;
+      document.getElementById('jsBike').textContent = state.hasBike;
+      document.getElementById('jsCar').textContent = state.hasCar;
+      document.getElementById('jsRide').textContent = state.hasRide;
+      // Java
+      document.getElementById('javaDist').textContent = Math.floor(state.distance);
+      document.getElementById('javaRain').textContent = state.isRaining;
+      document.getElementById('javaBike').textContent = state.hasBike;
+      document.getElementById('javaCar').textContent = state.hasCar;
+      document.getElementById('javaRide').textContent = state.hasRide;
+    }
+
+    function switchTab(tabName) {
+      // Update buttons
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.target.classList.add('active');
+      // Update content
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      document.getElementById(tabName).classList.add('active');
+    }
+
+    function loadScenario(type) {
+      switch (type) {
+        case 'walk':
+          state.distance = 0.5;
+          state.isRaining = false;
+          state.hasBike = false;
+          state.hasCar = false;
+          state.hasRide = false;
+          break;
+        case 'bike':
+          state.distance = 3.0;
+          state.isRaining = false;
+          state.hasBike = true;
+          state.hasCar = false;
+          state.hasRide = false;
+          break;
+        case 'rainy':
+          state.distance = 3.0;
+          state.isRaining = true;
+          state.hasBike = true;
+          state.hasCar = false;
+          state.hasRide = false;
+          break;
+        case 'far':
+          state.distance = 10.0;
+          state.isRaining = false;
+          state.hasBike = false;
+          state.hasCar = true;
+          state.hasRide = false;
+          break;
+      }
+      // Update UI
+      distanceSlider.value = state.distance;
+      distanceValue.textContent = state.distance.toFixed(1);
+      document.getElementById('rainToggle').classList.toggle('active', state.isRaining);
+      document.getElementById('bikeToggle').classList.toggle('active', state.hasBike);
+      document.getElementById('carToggle').classList.toggle('active', state.hasCar);
+      document.getElementById('rideToggle').classList.toggle('active', state.hasRide);
+      updateCalculation();
+    }
+    // Initial calculation
+    updateCalculation();
+  </script>
+</body>
+
+</html>
